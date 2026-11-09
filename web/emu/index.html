@@ -87,6 +87,7 @@ footer small { font-size: 11px; opacity: .8; }
   <span><kbd>↑</kbd> <kbd>↓</kbd> SELECT</span>
   <span><kbd>←</kbd> <kbd>→</kbd> ALGORITHM</span>
   <span><kbd>Shift</kbd>-click holds a button</span>
+  <span>FM BLOCKS: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↓</kbd> down, <kbd>↑</kbd> / <kbd>X</kbd> turn, <kbd>Z</kbd> turn back, <kbd>Space</kbd> drop, <kbd>Enter</kbd> start / pause</span>
   <span id="midiknobs" hidden><label><input type="checkbox" id="knobson"> MIDI CC 20–27 turn the panel's knobs</label>
   <select id="knobmode" aria-label="How the controller sends CC 20–26" hidden>
     <option value="abs">absolute</option>
@@ -156,6 +157,7 @@ const KEYNAMES = ["F", "F♯", "G", "G♯", "A", "A♯", "B", "C", "C♯", "D", 
 const keyName = (k) => KEYNAMES[k % 12] + (3 + Math.floor((k + 5) / 12));
 
 let node = null, btnMask = 0, keyMask = 0, latched = 0, masterValue = 700, lastLeds = [0, 0, 0, 0, 0], layout = null;
+let gameOn = false;                                            // FM BLOCKS is on the screen (the worklet says)
 const angle = Object.fromEntries(KNOBS.map((n) => [n, 0]));
 angle.MASTER = -135 + 270 * masterValue / 1023;
 const knobs = [], buttons = [], keys = [];
@@ -348,10 +350,15 @@ const KEYMAP = {};
   .forEach((c, i) => KEYMAP[c] = { btn: B[[...ROW1, ...ROW2][i]] });
 Object.assign(KEYMAP, { BracketLeft: { btn: B["OCT-"] }, BracketRight: { btn: B["OCT+"] } });
 const ARROWS = { ArrowUp: [EN.SELECT, 1], ArrowDown: [EN.SELECT, -1], ArrowRight: [EN.ALGORITHM, 1], ArrowLeft: [EN.ALGORITHM, -1] };
+// FM BLOCKS (firmware/src/ui_game.c) on the screen: a game's keys over the map above, each pressing the FM-1 key the
+// game reads (OP2 left, B3 down, OP3 right, MONO turn left, POLY turn right, C5 drop; PLAY)
+const GAMEMAP = { ArrowLeft: { key: 3 }, ArrowDown: { key: 6 }, ArrowRight: { key: 5 }, ArrowUp: { key: 22 },
+                  KeyX: { key: 22 }, KeyZ: { key: 20 }, Space: { key: 19 }, Enter: { btn: B.PLAY } };
 addEventListener("keydown", (e) => {
   if (!node || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.(".hit.knob")) return;
-  if (ARROWS[e.code]) { const [r, n] = ARROWS[e.code]; turn(knobs.find((k) => k.role === r), n); e.preventDefault(); return; }
-  const m = KEYMAP[e.code];
+  const g = gameOn ? GAMEMAP[e.code] : undefined;
+  if (!g && ARROWS[e.code]) { const [r, n] = ARROWS[e.code]; turn(knobs.find((k) => k.role === r), n); e.preventDefault(); return; }
+  const m = g || KEYMAP[e.code];
   if (!m) return;
   e.preventDefault();
   if (e.repeat) return;
@@ -503,6 +510,7 @@ async function switchOn() {
         if (m.type === "ready") res();
         else if (m.type === "error") rej(new Error(m.message));
         else if (m.type === "frame") {
+          if (m.game !== undefined) gameOn = !!m.game;
           if (m.fb) drawScreen(m.fb);
           if (m.leds) drawLights(lastLeds = m.leds, m.anim);
           if (m.sectors && !saveFlash(m.sectors) && !warned) {

@@ -115,7 +115,7 @@ static struct {
 #define LY_QUIET_MS 250u
 #define LY_DTAP_MS 300u                /* #83: the second press of a double tap at most this long after the first tap */
 
-static int layer_allowed(void) { return !ui.menu && !ui.confirm && !ui.uboot && !name_on(); }
+static int layer_allowed(void) { return !ui.menu && !ui.confirm && !ui.uboot && !name_on() && !game_on(); }
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 static uint32_t ly_down(uint32_t l) { return l && ((fm1_in.buttons & ly_bit(l)) != 0u || ui.lock == l); }   /* (locked: held) */
 static uint32_t layer_bits(void)

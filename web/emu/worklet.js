@@ -59,6 +59,7 @@ if (typeof registerProcessor === "function") {
       this.sentDraws = -1;
       this.sentWrites = -1;
       this.sentLeds = "";
+      this.sentGame = -1;
       this.lastFrame = 0;
       this.period = 1 / 30;
       this.busy = 0;
@@ -119,12 +120,17 @@ if (typeof registerProcessor === "function") {
         msg.fb = new Uint16Array(mem, ex.web_screen(), 240 * 240).slice();
         transfer.push(msg.fb.buffer);
       }
+      const game = ex.web_game_on ? ex.web_game_on() : 0;   // FM BLOCKS up or not: the page's game keys
+      if (game !== this.sentGame) {
+        this.sentGame = game;
+        msg.game = game;
+      }
       const writes = ex.web_flash_writes_count();
       if (writes !== this.sentWrites) {               // a save is done within one main-loop pass: whole here
         this.sentWrites = writes;
         msg.sectors = storeSectors(new Uint8Array(mem, ex.web_nor(), ex.web_nor_size()));
       }
-      if (msg.leds || msg.fb || msg.sectors || msg.load !== undefined) this.port.postMessage(msg, transfer);
+      if (msg.leds || msg.fb || msg.sectors || msg.load !== undefined || msg.game !== undefined) this.port.postMessage(msg, transfer);
     }
 
     // A click's down and up can arrive within one render quantum, but the FM-1's contacts never close for less than

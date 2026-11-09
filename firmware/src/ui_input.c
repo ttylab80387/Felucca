@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Felucca UI input: LEDs, knobs and buttons, SEQ step entry, panel setup. */
+#include "ui_game.c"                                    /* GAME: FM BLOCKS (before NAME: keys_mode) */
 #include "ui_name.c"                                    /* NAME: naming user presets and projects */
 /* ----------------------------------------------------------- LEDs --- */
 /* The LED picture is built off-line and copied one byte per column: clearing
@@ -62,7 +63,7 @@ static int layer_set_open(void);                       /* (ui_layer.c) */
  * turned opened LFO's page on release before, and edited the page under it for good. The values: ui.c mom */
 static int mom_down(void)                              /* LFO held where its turns are momentary */
 {
-    return ((fm1_in.buttons >> panel.btn[B_LFO]) & 1u) && !ui.menu && !ui.confirm && !name_on() && !ui.layer && !ui.uboot;
+    return ((fm1_in.buttons >> panel.btn[B_LFO]) & 1u) && !ui.menu && !ui.confirm && !name_on() && !game_on() && !ui.layer && !ui.uboot;
 }
 /* KNOB k turned s with LFO held: 1 = taken (a momentary value, or refused full), 0 = not a momentary value (the turn
  * goes as ever: the column picks, steps, acts) */
@@ -132,6 +133,8 @@ static void sel_play(uint32_t m, int32_t s)
 
 static uint32_t oct_leds(void)
 {
+    if (game_on() && !ui.confirm && !ui.menu)           /* GAME: OCT- / OCT+ do nothing */
+        return 0u;
     if (name_on() && !ui.confirm && !ui.menu)           /* NAME: OCT- cancels, OCT+ (breathing) writes */
         return 1u | OCT_BREATH;
     if (layer_set_open())                               /* a SET layer: OCT- puts back (UNDO), OCT+ nothing */
@@ -291,9 +294,9 @@ static uint32_t step_leds(void)
  * dark; 0: the keys held and the notes playing, over the idle glow */
 static int keys_own(void)
 {
-    return (name_on() && !ui.menu) || ui.layer || grid_on()
+    return ((name_on() || game_on()) && !ui.menu) || ui.layer || grid_on()
 #if FELUCCA_SLICE
-           || (!ui.menu && !name_on() && slice_page_on())
+           || (!ui.menu && !name_on() && !game_on() && slice_page_on())
 #endif
         ;
 }
@@ -343,7 +346,7 @@ static uint32_t song_leds(void);
 static int idle_leds(void)
 {
     int due = (ui_idle & 1u) && !(ui_prefs & PREF_ANIM_OFF) && !song.playing && !seq_counting() && !chain_busy() &&
-              !song.rec && !transport_req && !ui.layer && !ui.lock && !ui.menu && !ui.confirm && !ui.uboot && !name_on() &&
+              !song.rec && !transport_req && !ui.layer && !ui.lock && !ui.menu && !ui.confirm && !ui.uboot && !name_on() && !game_on() &&
               !(fm1_in.notes | fm1_in.buttons) && !panel_moved && !play_leds() && fm1_ms - scrn.idle >= IDLE_LEDS_MS;
     if (!due) {
         if (fm1_led_idle_on())
@@ -362,10 +365,10 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
     uint32_t c;
     if (br)
         *br = 0;
-    c = name_on() && !ui.menu ? name_leds() : ui.layer ? layer_leds(br) : grid_on() ? grid_leds() :
+    c = game_on() && !ui.menu ? game_leds() : name_on() && !ui.menu ? name_leds() : ui.layer ? layer_leds(br) : grid_on() ? grid_leds() :
                  (fm1_in.notes & ~kb_layer) | play_leds() | step_leds() | (song_keys_on() ? song_leds() : 0u);
 #if FELUCCA_SLICE
-    if (!ui.layer && !ui.menu && !name_on() && slice_page_on())
+    if (!ui.layer && !ui.menu && !name_on() && !game_on() && slice_page_on())
         c |= slice_leds();                              /* SLICES: and the keys of the selected slice */
 #endif
     return c;
@@ -393,7 +396,7 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
 static void ui_leds(void)
 {
     uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0}, own[FM1_NCOL] = {0}, og[FM1_NCOL] = {0}, nb[FM1_NCOL] = {0};
-    uint8_t nm[FM1_NCOL] = {0}, sg[FM1_NCOL] = {0}, sm[FM1_NCOL] = {0}, iv[FM1_NCOL] = {0};
+    uint8_t nm[FM1_NCOL] = {0}, sg[FM1_NCOL] = {0}, sm[FM1_NCOL] = {0}, iv[FM1_NCOL] = {0}, gd[FM1_NCOL] = {0};
     uint32_t k, c, g, br, beat, sc, sr = 0;
     uint32_t fam = cur_fam(), mode = settings_leds, inv = leds_inv();   /* (1.5.6: INV LO 1, INV HI 2) */
     int keys_map = keys_own();
@@ -419,8 +422,11 @@ static void ui_leds(void)
     led_put(nb, panel.btn[B_OCTUP], (int)(k & OCT_BREATH));
     led_put(nb, panel.btn[B_OCTDN], (k & OCT_BREATH_DN) != 0u);
     c = key_leds(&br);
-    g = !keys_map ? 0u : grid_on() && !ui.layer && !name_on() ? grid_glow() : 0u;   /* (key_leds: the grid's map) */
+    g = !keys_map ? 0u : grid_on() && !ui.layer && !name_on() && !game_on() ? grid_glow() : 0u;   /* (key_leds: the grid's map) */
     beat = g ? grid_beats() & ~c : 0u;                  /* (the grid's empty beat starts: brighter than the glow) */
+    if (game_on() && !ui.menu)                          /* GAME: its keys at the dim level in every LEDS mode */
+        for (k = 0; k < 27u; k++)                       /* (ui_game.c game_glow; held: lit, game_leds) */
+            led_put(gd, 14u + k, (int)((game_glow() >> k) & 1u));
     sc = keys_map ? 0u : scale_leds(&sr);               /* SCALE LEDS: the scale's keys glow, the root's brighter */
     for (k = 0; k < 27u; k++) {
         uint32_t in = (sc >> k) & 1u, rt = (sr >> k) & 1u, idle = !((c >> k) & 1u);
@@ -455,6 +461,22 @@ static void ui_leds(void)
     }
     if (song.playing || (seq_counting() && cin_pos < click_beat_len() / 4u))   /* counting in: green on each beat */
         nl[LED_PLAY_GREEN >> 3] |= (uint8_t)(1u << (LED_PLAY_GREEN & 7u));
+    for (c = 0; c < FM1_NCOL; c++)
+        nd[c] |= (uint8_t)(gd[c] & ~nl[c]);
+    if (game_on() && !ui.menu) {                        /* GAME: PLAY and HOME only (ui_game.c game_playing) */
+        for (k = 0; k < NB; k++) {
+            led_clear(nl, panel.btn[k]);
+            led_clear(nd, panel.btn[k]);
+            led_clear(nb, panel.btn[k]);
+            led_clear(nm, panel.btn[k]);
+        }
+        nl[LED_PLAY_GREEN >> 3] &= (uint8_t)~(1u << (LED_PLAY_GREEN & 7u));
+        if (game_playing())
+            nl[LED_PLAY_GREEN >> 3] |= (uint8_t)(1u << (LED_PLAY_GREEN & 7u));
+        else
+            led_put(nb, panel.btn[B_PLAY], 1);
+        led_put(nd, panel.btn[B_HOME], 1);
+    }
     fm1_led_dim_level(mode == LEDS_DIM_LO || inv == 1u);   /* (INV LO: the darker mid level, ~8 %; HI ~12.5 %) */
     for (c = 0; c < FM1_NCOL; c++) {
         fm1_led_dim[c] = nd[c];
@@ -713,7 +735,7 @@ static uint64_t lock_held(void)
     const track_t *t = TSEL;
     uint32_t k, len = (uint32_t)t->p[P_SLEN], keys = fm1_in.notes & ~kb_layer;
     uint64_t m = 0;
-    if (ui.home || ui.menu || ui.confirm || ui.layer || name_on() || !song.seq_mode || cur_page()->graph != GR_ROLL ||
+    if (ui.home || ui.menu || ui.confirm || ui.layer || name_on() || game_on() || !song.seq_mode || cur_page()->graph != GR_ROLL ||
         !keys || detail_on())                           /* (DETAIL: its knobs are the step's own fields, sd_turn) */
         return 0;
     if (!grid_on())                                     /* the roll: the step being entered */
@@ -825,7 +847,7 @@ static uint64_t sd_held(void)                           /* the grid's step keys 
 {
     uint32_t k, len = (uint32_t)TSEL->p[P_SLEN], keys = fm1_in.notes & ~kb_layer;
     uint64_t m = 0;
-    if (!keys || !detail_on() || !grid_on() || ui.layer || name_on())
+    if (!keys || !detail_on() || !grid_on() || ui.layer || name_on() || game_on())
         return 0;
     for (k = 0; k < 27u; k++)
         if (((keys >> k) & 1u) && !key_black(k) && ui.bank * 16u + key_place(k) < len)
@@ -1494,6 +1516,7 @@ static void ui_input(void)
         usb_serial_apply();                             /* (MENU > USB SERIAL: when the menu has closed) */
     settings_later_poll();                              /* (#197: LIST / FAV written once the view is left or idle) */
     follow_poll();                                      /* (1.6, #242: SEQ's roll follows the play position) */
+    game_poll();                                        /* (FM BLOCKS: a new BEST written, ui_game.c) */
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     if (mom.n && !mom_down()) {                         /* MOMENTARY: LFO let go (or the menu, a layer ..): back */
@@ -1513,7 +1536,7 @@ static void ui_input(void)
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */
     layer_oct_open(pressed);                            /* (OCT± with a SET layer's button down: it opens now) */
-    oct = oct_taps(pressed, ui.menu || ui.confirm || act_cols() || name_on() || layer_set_open() || ui.ml.on);
+    oct = oct_taps(pressed, ui.menu || ui.confirm || act_cols() || name_on() || game_on() || layer_set_open() || ui.ml.on);
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
     lay = layer_held();
@@ -1579,11 +1602,12 @@ static void ui_input(void)
             ui.menu = 1;                                /* (at the tab and row it was left at) */
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
+            game_close();                               /* (GAME: kept, paused) */
             ui.force = 1;
             song.seq_mode = 0;
         }
     }
-    if (rec == BT_TAP && !ui.menu && !ui.confirm && !name_on())   /* REC pressed in another layer (REC alone: */
+    if (rec == BT_TAP && !ui.menu && !ui.confirm && !name_on() && !game_on())   /* REC pressed in another layer (REC alone: */
         rec_tap();                                      /* its layer's tap); nothing in the menu, a dialog or NAME */
     if (ui.menu) {                                      /* SAVE / REC taps do nothing here (HOME: above) */
         if (ui.save_t0)
@@ -1591,6 +1615,13 @@ static void ui_input(void)
         ui.pg_down = 0;
         if (!ui.home_t0)
             menu_input(oct);
+        return;
+    }
+    if (game_on() && !ui.confirm) {                     /* GAME: its keys, SELECT, PLAY (ui_game.c); */
+        if (ui.save_t0)                                 /* SAVE does nothing */
+            ui.save_t0 |= 2u;
+        ui.pg_down = 0;
+        game_input(pressed, notes);
         return;
     }
     if (name_on() && !ui.confirm) {                     /* NAME: the keys type, KNOB 1 / 2, OCT+ / OCT- (ui_name.c); */

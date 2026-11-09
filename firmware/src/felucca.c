@@ -47,6 +47,9 @@
                                     * main.c turns 2ND CORE off), not a restart: as Felucca's own second core did */
 #define FM1_CRASH_CTX_N 1u         /* chip/fm1_irq.h: the registers of the last crash only (80 B of .noinit; four would
                                     * not fit beside the project slots) */
+#ifndef FELUCCA_GAME_BOOT
+#define FELUCCA_GAME_BOOT 1      /* 1: the splash, then FM BLOCKS (ui_game.c); HOME held leaves it for the synth */
+#endif
 #ifndef FELUCCA_VERSION
 #define FELUCCA_VERSION "v1.7.0" /* shown in the menu, the console and the editor; build.py --release X.Y */
 #endif

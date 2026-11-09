@@ -19,14 +19,14 @@ enum { MI_COLOR, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_SCOPE, MI_H
 #if FELUCCA_CPU2
        MI_CPU2,                                        /* (not in a FELUCCA_CPU2=0 build: core.h) */
 #endif
-       MI_PANEL, MI_INFO, MI_ABOUT, MI_COUNT };
+       MI_GAME, MI_PANEL, MI_INFO, MI_ABOUT, MI_COUNT };
                                                        /* (1.1: the metronome's rows in AUDIO; 1.2: RESTORE LAST in
                                                         * SYSTEM, SCALE LEDS STEP PREVIEW CHORD ENTRY in CONTROL, SCOPE in
                                                         * DISPLAY, TUNE in AUDIO, MIDI IN in MIDI, INFO in SYSTEM;
                                                         * 1.3: HOME in DISPLAY; 1.5: HELP in SYSTEM; 1.5.5: SELECT
                                                         * in CONTROL, T1..T4 CHANNEL, AUTO SELECT and SCREEN WAKE
                                                         * in MIDI; 1.6.1: 2ND CORE in SYSTEM) */
-#define MI_VALUES MI_PANEL
+#define MI_VALUES MI_GAME
 #if FELUCCA_CPU2
 #define MI_TEXT(row) ((row) == MI_CPU2)                /* OFF / ON (BETA): its values as words, not a switch (ui_menu.c) */
 #else
@@ -44,7 +44,7 @@ static const char *const MI_NAME[MI_COUNT] = {"COLOR", "STYLE", "LARGE", "ANIM",
 #if FELUCCA_CPU2
                                               "2ND CORE",
 #endif
-                                              "CALIBRATION", "INFO",
+                                              "GAME", "CALIBRATION", "INFO",
                                               "ABOUT"};
 /* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
  * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); at
@@ -76,6 +76,7 @@ static const uint8_t MI_TAB[MI_COUNT] = {
 #if FELUCCA_CPU2
     MTAB_SYSTEM,                                                            /* 2ND CORE (1.6.1) */
 #endif
+    MTAB_SYSTEM,                                                            /* GAME (FM BLOCKS) */
     MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,                                  /* CALIBRATION, INFO (1.2), ABOUT */
 };
 /* TUNE: the project's tuning in cents (G_TUNE, -50..+50); as a row its values 0..TUNE_N - 1 (value - TUNE_MIN). The

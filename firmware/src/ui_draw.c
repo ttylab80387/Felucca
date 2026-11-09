@@ -13,6 +13,9 @@ static void draw_menu(void);
 static int name_on(void);                              /* NAME (ui_name.c) */
 static uint64_t lock_held(void);                       /* parameter locks: the steps held on STEP (ui_input.c) */
 static void name_draw(void);
+static int game_on(void);                              /* GAME (ui_game.c) */
+static void game_draw(void);
+static void game_open(void);
 #include "ui_help.c"                                   /* 1.5: HELP's hints (draw_foot, ui_layer.c draw_layer) */
 
 /* --------------------------------------------------------- drawing --- */
@@ -1578,7 +1581,7 @@ static void ui_draw_page(uint32_t counting)
         ui.force = 0;
         return;
     }
-    if (counting && !ui.confirm && !name_on()) {        /* the count-in: over the page (and a layer) */
+    if (counting && !ui.confirm && !name_on() && !game_on()) {        /* the count-in: over the page (and a layer) */
         draw_countin();
         draw_head();
         return;
@@ -1589,6 +1592,10 @@ static void ui_draw_page(uint32_t counting)
             ui.force = 0;
         }
         draw_head();                                    /* recording remains visible over confirmations */
+        return;
+    }
+    if (game_on()) {                                    /* GAME: FM BLOCKS (ui_game.c) */
+        game_draw();
         return;
     }
     if (name_on()) {                                    /* NAME: a user preset's or a project's (ui_name.c) */

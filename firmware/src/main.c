@@ -160,6 +160,12 @@ static void fm1_main(void)
         fm1_delay_ms(10);
         master_poll();
     }
+#if FELUCCA_GAME_BOOT
+    /* FM BLOCKS from power-on (ui_game.c); after a crash, a hang or a failed boot the synth's page instead, USB up
+     * for an update. Before the keys are let go (kb_boot_hold): game_open makes them silent first */
+    if (boot_clean)
+        game_open();
+#endif
     kb_boot_hold = 0;
     lcd_fill(0, 0, 240, 240, T_BG);
     scrn.idle = fm1_ms;                        /* (MENU > SCREEN OFF: from here) */

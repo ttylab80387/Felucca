@@ -52,6 +52,7 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
         for (i = 1; i < n; i += 2u)                     /* (MIX: fx.c mix_block took it) */
             scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)out[2u * i];
     click_render(out, n);                               /* the metronome (click.c): the DAC only, not USB */
+    gsnd_render(out, n);                                /* FM BLOCKS' effects (game_snd.c): the same */
     for (i = 0; i < n; i++) {
         out[2u * i] *= 1 << OUT_SHIFT;
         out[2u * i + 1u] *= 1 << OUT_SHIFT;

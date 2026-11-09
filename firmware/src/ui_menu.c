@@ -559,6 +559,10 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         if (ui.menu_sel == MI_LCLEAR) {                 /* LEARN CLEAR (1.5): every learned CC; no dialog (the menu has
                                                          * none: every other row's change is undone the same way) */
             ui_message(ml_clear_all() ? "LEARN CLEARED" : "NOTHING LEARNED");
+        } else if (ui.menu_sel == MI_GAME) {           /* GAME: FM BLOCKS (ui_game.c) */
+            settings_save();                            /* (the menu's changes, as menu_close) */
+            ui.menu = 0;
+            game_open();
         } else if (ui.menu_sel == MI_PANEL) {
             panel_setup();
             scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */

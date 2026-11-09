@@ -556,8 +556,10 @@ if ! command -v emcc >/dev/null 2>&1; then
 elif ! command -v node >/dev/null 2>&1 || [ ! -f build/gen/felucca_tables.h ]; then
     echo "== skip the browser emulator (needs node and build/gen)"
 else
-    run "browser emulator: the firmware to WebAssembly (web/emu/build.sh -> build/emu)" sh web/emu/build.sh
-    cc -O2 -ffp-contract=off -w $HALI -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
+    # (FELUCCA_GAME_BOOT=0 in both: the synth from power-on, as these checks expect; FM BLOCKS is checked apart)
+    run "browser emulator: the firmware to WebAssembly (web/emu/build.sh -> build/emu)" \
+        env EMU_CFLAGS="-DFELUCCA_GAME_BOOT=0 ${EMU_CFLAGS:-}" sh web/emu/build.sh
+    cc -O2 -ffp-contract=off -w -DFELUCCA_GAME_BOOT=0 $HALI -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
     run "browser emulator: the same song from the native build" "$OUT/emu_native" "$OUT/emu_native.f32"
     run "browser emulator: boot, keys, MIDI, screen, LEDs, PLAY, a save kept across instances, = native, cost" \
         node web/emu/emu_test.mjs build/emu/felucca.wasm "$OUT/emu_native.f32"

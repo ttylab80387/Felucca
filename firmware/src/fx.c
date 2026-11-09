@@ -229,6 +229,7 @@ static uint32_t div_samples(uint32_t div)
 
 #include "perform.c"                                 /* the FX hold layer's effects (the master) */
 #include "click.c"                                   /* the metronome's click (after the master: audio.c) */
+#include "game_snd.c"                                /* FM BLOCKS' effects (after the master, as the click) */
 
 /* the delay's TIME (params.c N_DTIME): N_DIV's ten (div_samples), then 1.5.1's dotted 1/8D 1/16D 1/4D (10, 11, 12: 3/4,
  * 3/8, 3/2 of a quarter); at most DLY_LEN - 1 samples (1.486 s): 1/4D clamps at 60 BPM and below (1/2 below 81) */

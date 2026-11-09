@@ -28,6 +28,9 @@
 #define FELUCCA_OTA 0
 #define FELUCCA_UAC 0
 #define FELUCCA_UART 0
+#ifndef FELUCCA_GAME_BOOT
+#define FELUCCA_GAME_BOOT 1      /* 1: the splash, then FM BLOCKS (ui_game.c); HOME held leaves it for the synth */
+#endif
 #ifndef FELUCCA_VERSION
 #define FELUCCA_VERSION "WEB"
 #endif
@@ -281,6 +284,10 @@ static void web_power_on(void)
     autosave_boot(boot_clean);            /* main.c: the last session's music (1.2, project.c) */
     web_boot_ms = fm1_ms + 430u;         /* main.c: 30 + 400 ms before the first frame */
     web_booted = 1;
+#if FELUCCA_GAME_BOOT
+    if (boot_clean)                       /* main.c: FM BLOCKS from power-on (not after a crash) */
+        game_open();
+#endif
 }
 
 /* one pass of main.c fm1_main's loop (what the browser has: no USB, editor, UBOOT, console) */
@@ -494,4 +501,40 @@ EXPORT uint16_t *web_screen(void) { return web_fb; }
 EXPORT uint32_t web_screen_draws(void) { return web_draws; }
 EXPORT uint32_t web_now_ms(void) { return fm1_ms; }
 EXPORT uint32_t web_playing(void) { return song.playing; }
+EXPORT uint32_t web_game_on(void) { return (uint32_t)game_on(); }   /* FM BLOCKS up: the page's game keys */
+EXPORT int32_t web_test_game_x(void) { return gm.x; }               /* (tests: the piece's column, */
+EXPORT int32_t web_test_game_y(void) { return gm.y; }               /* .. its row; the game's state) */
+EXPORT uint32_t web_test_game_st(void) { return gm.st; }
+EXPORT void web_test_game_lines(uint32_t n) { gm.lines = n; }        /* (tests: LINES, so LEVEL and its scene) */
+EXPORT uint32_t web_test_game_ground(void) { return gm.ground; }      /* (tests: on the floor, its delay running; */
+EXPORT void web_test_game_cell(uint32_t r, uint32_t c, uint32_t v)    /* .. a cell of the well set) */
+{
+    if (r < GM_H && c < GM_W)
+        gm.board[r][c] = (uint8_t)v;
+}
+EXPORT void web_test_game_best_bytes(uint32_t v) { gm_best_write(v); }   /* (tests: BEST's stored bytes; */
+EXPORT uint32_t web_test_game_best(void) { return gm.best; }            /* .. the game's BEST) */
+/* tests: FM BLOCKS' bottom rows full but for the falling piece's cells, the piece moved down into its place there
+ * (a hard drop locks it and clears them) */
+EXPORT uint32_t web_test_game_rows(void)
+{
+    uint32_t m = GM_SHAPE[gm.cur][gm.rot], k;
+    int32_t r0 = 3, r1 = 0, y, r, c;
+    for (k = 0; k < 16u; k++)
+        if (m & (0x8000u >> k)) {
+            r0 = (int32_t)(k >> 2) < r0 ? (int32_t)(k >> 2) : r0;
+            r1 = (int32_t)(k >> 2) > r1 ? (int32_t)(k >> 2) : r1;
+        }
+    y = GM_H - 1 - r1;
+    memset(gm.board, 0, sizeof gm.board);
+    for (r = y + r0; r < GM_H; r++)
+        for (c = 0; c < GM_W; c++)
+            gm.board[r][c] = 1;
+    for (k = 0; k < 16u; k++)
+        if (m & (0x8000u >> k))
+            gm.board[y + (int32_t)(k >> 2)][gm.x + (int32_t)(k & 3u)] = 0;
+    gm.y = (int8_t)y;                                  /* (right above its hole: a hard drop from here fills it) */
+    ui.force = 1;
+    return (uint32_t)(r1 - r0 + 1);                   /* the rows a hard drop clears */
+}
 EXPORT uint32_t web_sample_rate(void) { return FS; }
