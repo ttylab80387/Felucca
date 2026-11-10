@@ -2,6 +2,24 @@
 
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 
+## FM BLOCKS (this branch)
+
+![FM BLOCKS in the browser emulator: level 1, paused](docs/fm-blocks.png)
+
+This `fm-blocks` branch adds FM BLOCKS, a falling-blocks game, to Felucca 1.7.0. The FM-1 starts in the game; hold
+HOME for the synth, or open it again from MENU > SYSTEM > GAME. It is not made or endorsed by Hügelton Instruments.
+
+- Play it in the browser: [ttylab80387.com/fm-blocks](https://ttylab80387.com/fm-blocks/) (press Switch on)
+- On the FM-1: OP2 / OP3 move, MONO / POLY turn, the 4th white key from the left soft drop, the 5th white key from the
+  right hard drop, PLAY start / pause
+- In the browser: arrow keys move / soft drop / turn, Z turns back, Space hard drop, Enter start / pause
+- The game: `firmware/src/ui_game.c`, its sound `firmware/src/game_snd.c`
+- Install at your own risk: build with `./build.sh` ([BUILDING.md](BUILDING.md)), then
+  `python tools/fm1_install.py build/felucca.fwsc` (needs mido with python-rtmidi). M-VAVE's updater, or
+  `tools/fm1_install.py` with the official V15 file, takes the FM-1 back to the official firmware.
+
+Felucca's own README follows.
+
 ## Maintenance Notice
 
 What began as a personal experiment grew far beyond my expectations. I’m grateful to everyone who contributed, supported the project, and made music with Felucca.
