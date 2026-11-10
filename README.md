@@ -14,9 +14,10 @@ HOME for the synth, or open it again from MENU > SYSTEM > GAME. It is not made o
   right hard drop, PLAY start / pause
 - In the browser: arrow keys move / soft drop / turn, Z turns back, Space hard drop, Enter start / pause
 - The game: `firmware/src/ui_game.c`, its sound `firmware/src/game_snd.c`
-- Install at your own risk: build with `./build.sh` ([BUILDING.md](BUILDING.md)), then
-  `python tools/fm1_install.py build/felucca.fwsc` (needs mido with python-rtmidi). M-VAVE's updater, or
-  `tools/fm1_install.py` with the official V15 file, takes the FM-1 back to the official firmware.
+- Install at your own risk: download the `.fwsc` from [Releases](https://github.com/ttylab80387/Felucca/releases)
+  (or build it with `./build.sh`, [BUILDING.md](BUILDING.md)), then `python tools/fm1_install.py fm-blocks-v0.12.fwsc`
+  (needs mido with python-rtmidi). M-VAVE's updater, or `tools/fm1_install.py` with the official V15 file, takes the
+  FM-1 back to the official firmware.
 
 Felucca's own README follows.
 
